@@ -1,4 +1,4 @@
-target := sudoku
+target := sudoku wordle
 
 all: $(target)
 

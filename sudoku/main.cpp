@@ -224,16 +224,23 @@ public:
 };
 
 struct MyArgs : public argparse::Args {
-  std::string &name = arg<std::string>();
-  bool &debug = flag({"-d", "--debug"});
-  bool &verbose = flag({"-v", "--verbose"});
-  std::string &file = kwarg<std::string>({"-f", "--file"});
-  std::string &input = kwarg<std::string>({"-i", "--input"});
+  std::string &name = arg<std::string>("name of the executable");
+  bool &debug   = flag({"-d", "--debug"},        "enable default mode");
+  bool &verbose = flag({"-v", "--verbose"},      "enable verbose mode");
+  bool &help    = flag({"-h", "--help"},         "print help informations");
+  bool &inter   = flag({"-it", "--interactive"}, "enable interactive mode");
+  std::string &file  = kwarg<std::string>({"-f", "--file"}, "[path to a file]");
+  std::string &input = kwarg<std::string>({"-i", "--input"},"[data from terminal]");
 };
 
-int main(int argc, char* argv[]){
+int main(int argc, const char* argv[]){
   MyArgs args = argparse::parse<MyArgs>(argc, argv);
   Sudoku sudoku;
+
+  if(args.help){
+    args.print();
+    return 0;
+  }
 
   if(args.file != ""){
     std::ifstream t(args.file);

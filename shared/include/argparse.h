@@ -10,7 +10,7 @@
 namespace argparse{
 
   template<class C>
-  C parse(int argc, char* argv[]){
+  C parse(int argc, const char* argv[]){
     C parser;
     parser.parse(argc, argv);
     return parser;
@@ -36,6 +36,7 @@ namespace argparse{
     Parser parser;
     Destructor destructor;
     ArgType type;
+    const char* description;
   };
 
   class Args{
@@ -46,16 +47,15 @@ namespace argparse{
     std::unordered_map<std::string, int> alias_to_index;
     std::vector<int> position_to_index;
 
-    std::vector<const char*> descriptions;
-
     template<class C>
-    C& add_arg(Parser parser, ArgType type){
+    C& add_arg(Parser parser, ArgType type, const char* description){
       C* arg = new C;
       arg_data data = {
         .ptr = (byte*)arg,
         .parser = parser,
         .destructor = free_object<C>,
-        .type = type
+        .type = type,
+        .description = description
       };
       params.push_back(data);
       return *arg;
@@ -65,29 +65,31 @@ namespace argparse{
     Args() : positional_param(0) {};
     ~Args();
     void print();
-    void parse(int argc, char* argv[]);
+    void parse(int argc, const char* argv[]);
   protected:
 
     template<class C>
     C& kwarg(
       std::initializer_list<const char*> aliases,
-      C default_value = C(),
       const char* description = "",
+      C default_value = C(),
       Parser parser = str2type<C>
     ){
       for(const char* alias : aliases)
         alias_to_index.insert({alias, params.size()});
-      return add_arg<C>(parser, KWARG);
+      C& ref = add_arg<C>(str2type<C>, KWARG, description);
+      ref = default_value;
+      return ref;
     }
 
     template<class C>
     C& arg(
-      C default_value = C(),
       const char* description = "",
+      C default_value = C(),
       Parser parser = str2type<C>
     ){
       position_to_index.push_back(params.size());
-      C& ref = add_arg<C>(str2type<C>, ARG);
+      C& ref = add_arg<C>(str2type<C>, ARG, description);
       ref = default_value;
       return ref;
     }

@@ -26,7 +26,7 @@ Args::~Args(){
   }
 }
 
-void Args::parse(int argc, char* argv[]){
+void Args::parse(int argc, const char* argv[]){
   for(int i = 0; i < argc; i++){
     auto itr = alias_to_index.find(argv[i]);
     int idx;
@@ -51,7 +51,35 @@ void Args::parse(int argc, char* argv[]){
 }
 
 void Args::print(){
+  std::cout << "positional arguments:" << std::endl;
+  for(arg_data arg : params){
+    if(arg.type == ARG){
+      std::cout << "\t[0] " << arg.description << std::endl;
+    }
+  }
+  std::vector<std::vector<std::string>> aliases(params.size());
+  for(auto itr : alias_to_index)
+    aliases[itr.second].push_back(itr.first);
 
+  std::cout << "\nkeyword argument: " << std::endl;
+  for(size_t i = 0; i < aliases.size(); i++){
+    if(params[i].type != KWARG)
+      continue;
+    std::cout << "\t";
+    for(auto alias : aliases[i])
+      std::cout << (alias == *aliases[i].begin() ? " " : ", ") << alias;
+    std::cout << " " << params[i].description << std::endl;
+  }
+
+  std::cout << "\nflags: " << std::endl;
+  for(size_t i = 0; i < aliases.size(); i++){
+    if(params[i].type != FLAG)
+      continue;
+    std::cout << "\t";
+    for(auto alias : aliases[i])
+      std::cout <<  (alias == *aliases[i].begin() ? " " : ", ") << alias;
+    std::cout << " " << params[i].description << std::endl;
+  }
 }
 
 bool& Args::flag(
@@ -60,7 +88,7 @@ bool& Args::flag(
 ){
   for(const char* alias : aliases)
     alias_to_index.insert({alias, params.size()});
-  bool &ref =  add_arg<bool>(str2type<bool>, FLAG);
+  bool &ref =  add_arg<bool>(str2type<bool>, FLAG, description);
   ref = false;
   return ref;
 }
