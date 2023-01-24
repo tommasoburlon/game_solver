@@ -51,17 +51,8 @@ int main(int argc, const char *argv[]){
   }
   std::cout << "dictionary: " << args.dict << " loaded, words\n";
   std::cout << args.word_size << "-word: " << words.size() << std::endl;
+
   Solver solver(words);
-
-  constraint sum(args.word_size);
-
-  if(args.cache != ""){
-    std::ifstream file(args.cache);
-    if(file.good())
-      solver.read_cache(file);
-    file.close();
-  }
-
   while(true){
     std::vector<std::string> solutions = solver.solutions();
     std::cout << "possible solutions: " << solutions.size() << std::endl;
@@ -70,20 +61,12 @@ int main(int argc, const char *argv[]){
     for(int i = 0; i < hints.size(); i++)
       std::cout << hints[i] << "      " << (i < solutions.size() ? solutions[i] : " ") << std::endl;
 
-    if(args.cache != ""){
-      std::ofstream file(args.cache);
-      solver.write_cache(file);
-      file.close();
-    }
-
     std::string word, mask;
     std::cin >> word;
     std::cin >> mask;
     double score = solver.score(word);
-    std::cout << "your score: " << score << ", accuracy: " << 100 * hints[0].value / score << "%" << std::endl;
-    constraint cstr(word, mask);
-    sum.merge(cstr);
-    solver.turn(cstr);
+    std::cout << "your score: " << score << ", accuracy: " << 100 * hints[0].score / score << "%" << std::endl;
+    solver.turn(word, mask);
   }
 
   return 0;

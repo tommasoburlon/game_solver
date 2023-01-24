@@ -11,47 +11,33 @@
 #include <unordered_map>
 
 struct hint_t{
-  double value;
-  bool is_possible;
+  double score;
+  bool is_solution;
   std::string word;
 
-  auto operator<(const hint_t& node) const { return value > node.value; };
+  auto operator<(const hint_t& node) const { return score > node.score; };
   friend std::ostream& operator<<(std::ostream& stream, const hint_t& hint){
-    stream << hint.word << " [" << hint.value << "] ";
-    if(hint.is_possible) stream << "is POSSIBLE ";
+    stream << hint.word << " [" << hint.score << "] ";
+    if(hint.is_solution) stream << "is POSSIBLE ";
     return stream;
   }
-
-  void serialize(std::ostream&) const;
-  static hint_t deserialize(std::istream&);
 };
 
 class Solver{
   std::atomic<int> observed;
-  std::vector<std::string> words, possible_solutions;
+  std::vector<std::string> words, sols;
 
   std::priority_queue<hint_t> hints_job(int, int, int, std::unordered_set<std::string>);
-
-  constraint cstr;
-  std::unordered_map<constraint, std::vector<hint_t>> cache;
-
 public:
-  Solver(std::vector<std::string> w) : words(w), possible_solutions(w), cstr(w[0].size()) {};
+  Solver(std::vector<std::string> w) : words(w), sols(w) {};
   ~Solver(){};
 
   std::vector<hint_t> hints(int size = 1, int jobs = 1);
   double score(std::string word);
-  void turn(constraint cstr);
+  void turn(std::string word, std::string pattern);
 
-  constraint get_constraint(){ return cstr; };
-  std::vector<std::string> solutions(){ return possible_solutions; }
-  void reset(){
-    cstr = constraint(words[0].size());
-    possible_solutions = words;
-  }
-
-  void read_cache(std::istream&);
-  void write_cache(std::ostream&);
+  std::vector<std::string> solutions(){ return sols; }
+  void reset(){ sols = words; }
 };
 
 #endif

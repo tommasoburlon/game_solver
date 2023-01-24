@@ -5,7 +5,7 @@
 #include <future>
 #include <chrono>
 
-void hint_t::serialize(std::ostream& stream) const {
+/*void hint_t::serialize(std::ostream& stream) const {
   stream.write((char*)&value, sizeof(value));
   stream.write((char*)&is_possible, sizeof(is_possible));
 
@@ -26,22 +26,18 @@ hint_t hint_t::deserialize(std::istream& stream){
   for(int i = 0; i < len; i++)
     stream.read((char*)&ret.word[i], 1);
   return ret;
-}
+}*/
 
 double Solver::score(std::string word){
-  std::unordered_map<constraint, int> table;
-  for(auto other : possible_solutions){
-    constraint cstr = constraint::find_constraint(word, other);
-    auto res = table.insert({cstr, 0});
+  std::unordered_map<std::string, int> table;
+  int len = 0;
+  for(std::string& other : sols){
+    std::string pattern = find_pattern(word, other);
+    auto res = table.insert({pattern, 0});
+    len += res.second;
     res.first->second++;
   }
-
-  int ctr = 0, len = 0;
-  for(auto itr : table){
-    ctr += itr.second;
-    len++;
-  }
-  return (double)ctr / len;
+  return (double)sols.size() / len;
 }
 
 std::priority_queue<hint_t> Solver::hints_job(int start, int end, int size, std::unordered_set<std::string> table){
@@ -53,8 +49,8 @@ std::priority_queue<hint_t> Solver::hints_job(int start, int end, int size, std:
     double value = score(word);
     bool is_possible = (table.find(word) != table.end());
     hint_t hint = {
-      .value = value - (is_possible ? PRESENCE_VALUE : 0),
-      .is_possible = is_possible,
+      .score = value - (is_possible ? PRESENCE_VALUE : 0),
+      .is_solution = is_possible,
       .word = word
     };
 
@@ -81,13 +77,11 @@ void draw_bar(float percentage, int bar_size, bool newline = true){
 }
 
 std::vector<hint_t> Solver::hints(int size, int jobs){
-  auto itr = cache.find(cstr);
-  if(itr != cache.end())
-    return itr->second;
   std::vector<std::future<std::priority_queue<hint_t>>> queues;
   std::priority_queue<hint_t> master_queue;
   std::unordered_set<std::string> table;
-  for(auto word : possible_solutions)
+
+  for(auto word : sols)
     table.insert(word);
 
   observed = 0;
@@ -118,46 +112,15 @@ std::vector<hint_t> Solver::hints(int size, int jobs){
     master_queue.pop();
   }
 
-  cache.insert({cstr, result});
   return result;
 }
 
-void Solver::turn(constraint _cstr){
-  possible_solutions = _cstr.filter(possible_solutions);
-  cstr.merge(_cstr);
-}
-
-
-void Solver::read_cache(std::istream& stream){
-  int len, word_size, num_word;
-  stream.read((char*)&len, sizeof(len));
-  stream.read((char*)&word_size, sizeof(word_size));
-  for(int i = 0; i < len; i++){
-    constraint idx = constraint::deserialize(stream);
-    std::vector<hint_t> hint_arr;
-    stream.read((char*)&num_word, sizeof(num_word));
-    for(int j = 0; j < num_word; j++){
-      hint_t hint = hint_t::deserialize(stream);
-      hint_arr.push_back(hint);
-    }
-
-    idx.print();
-
-    if(possible_solutions.size() > 100)
-      cache.insert({idx, hint_arr});
+void Solver::turn(std::string word, std::string pattern){
+  std::vector<std::string> new_sols;
+  for(int i = 0; i < sols.size(); i++){
+    std::string new_pattern = find_pattern(word, sols[i]);
+    if(new_pattern == pattern)
+      new_sols.push_back(sols[i]);
   }
-}
-
-void Solver::write_cache(std::ostream& stream){
-  int len = cache.size(), word_size = cstr.size();
-  stream.write((char*)&len, sizeof(len));
-  stream.write((char*)&word_size, sizeof(word_size));
-  for(auto itr : cache){
-    itr.first.serialize(stream);
-    len = itr.second.size();
-    stream.write((char*)&len, sizeof(len));
-    for(auto hint : itr.second){
-      hint.serialize(stream);
-    }
-  }
+  sols = new_sols;
 }
